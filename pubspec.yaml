@@ -7,8 +7,10 @@ environment:
   sdk: ^3.10.4
 
 dependencies:
+  chewie: ^1.13.0
   flutter:
     sdk: flutter
+  http: ^1.6.0
   video_player: ^2.10.1
 
 dev_dependencies:
@@ -18,3 +20,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/images/
