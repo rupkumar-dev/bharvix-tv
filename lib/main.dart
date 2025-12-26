@@ -1,5 +1,5 @@
+import 'package:bharvix_tv/Dashboard/dashboard.dart';
 import 'package:bharvix_tv/core/iptv_repository.dart';
-import 'package:bharvix_tv/home.dart';
 import 'package:bharvix_tv/provider/iptv_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -19,7 +19,7 @@ class MyApp extends StatelessWidget {
     create: (_) => IptvProvider(IptvRepository())..loadChannels(),
       child: const MaterialApp(
         debugShowCheckedModeBanner: false,
-        home: HomeScreen(),
+        home: Dashboard(),
       ),
     );
   }
