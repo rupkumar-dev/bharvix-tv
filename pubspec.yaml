@@ -7,12 +7,11 @@ environment:
   sdk: ^3.10.4
 
 dependencies:
-  chewie: ^1.13.0
   flutter:
     sdk: flutter
   http: ^1.6.0
   provider: ^6.1.5+1
-  video_player: ^2.10.1
+  better_player_plus: ^1.1.5
 
 dev_dependencies:
   flutter_test:
