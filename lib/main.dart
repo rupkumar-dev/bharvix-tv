@@ -5,23 +5,23 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => IptvProvider(IptvRepository())..loadChannels(),
+
+      child: const MyApp(),
+    ),
+  );
 }
-
-
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-    create: (_) => IptvProvider(IptvRepository())..loadChannels(),
-      child: const MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: Dashboard(),
-      ),
+    return const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Dashboard(),
     );
   }
 }
-
