@@ -1,8 +1,8 @@
 import 'dart:async';
-import 'package:bharvix_tv/core/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'package:bharvix_tv/core/app_colors.dart';
 import '../models/app_channel.dart';
 import '../provider/iptv_provider.dart';
 import 'video_player.dart';
@@ -18,11 +18,12 @@ class SearchScreen extends StatefulWidget {
 class _SearchScreenState extends State<SearchScreen> {
   final TextEditingController _controller = TextEditingController();
   Timer? _debounce;
+
   List<AppChannel> _results = [];
 
-  bool get hasQuery => _controller.text.trim().isNotEmpty;
+  bool get _isSearching => _controller.text.trim().isNotEmpty;
 
-  void onSearch(String value) {
+  void _onSearch(String value) {
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 350), () {
       final provider = context.read<IptvProvider>();
@@ -39,7 +40,7 @@ class _SearchScreenState extends State<SearchScreen> {
     super.dispose();
   }
 
-  TextSpan highlight(String text, String query) {
+  TextSpan _highlight(String text, String query) {
     if (query.isEmpty) return TextSpan(text: text);
 
     final lower = text.toLowerCase();
@@ -54,7 +55,7 @@ class _SearchScreenState extends State<SearchScreen> {
         text: text.substring(index, index + q.length),
         style: const TextStyle(
           fontWeight: FontWeight.bold,
-       
+          color: AppColors.accentColor,
         ),
       ),
       TextSpan(text: text.substring(index + q.length)),
@@ -66,24 +67,19 @@ class _SearchScreenState extends State<SearchScreen> {
     final provider = context.watch<IptvProvider>();
 
     return Scaffold(
-    
       appBar: AppBar(
-    
-        elevation: 0,
         title: Text(
-          hasQuery ? 'Results (${_results.length})' : 'Search',
-          style: const TextStyle(color: Colors.white),
+          _isSearching ? 'Results (${_results.length})' : 'Search',
         ),
       ),
       body: Column(
         children: [
           _buildSearchBar(),
-          if (!hasQuery) ...[
-            const FilterChips(),
-            Expanded(child: _buildSuggestions(provider)),
-          ] else ...[
-            Expanded(child: _buildResults()),
-          ],
+          Expanded(
+            child: _isSearching
+                ? _buildSearchResults()
+                : _buildSuggestions(provider),
+          ),
         ],
       ),
     );
@@ -94,23 +90,21 @@ class _SearchScreenState extends State<SearchScreen> {
       padding: const EdgeInsets.all(16),
       child: TextField(
         controller: _controller,
-        onChanged: onSearch,
-        style: const TextStyle(color: Colors.white),
+        onChanged: _onSearch,
         decoration: InputDecoration(
-          hintText: 'Search channels, categories, language…',
-          hintStyle: const TextStyle(color: Colors.white54),
-          prefixIcon: const Icon(Icons.search, color: Colors.white54),
-          suffixIcon: hasQuery
+          hintText: 'Search channels, language, category…',
+          prefixIcon: const Icon(Icons.search),
+          suffixIcon: _isSearching
               ? IconButton(
-                  icon: const Icon(Icons.clear, color: Colors.white70),
+                  icon: const Icon(Icons.clear),
                   onPressed: () {
                     _controller.clear();
-                    setState(() => _results = []);
+                    setState(() => _results.clear());
                   },
                 )
               : null,
           filled: true,
-    
+          fillColor: AppColors.cardColor,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
             borderSide: BorderSide.none,
@@ -119,6 +113,48 @@ class _SearchScreenState extends State<SearchScreen> {
       ),
     );
   }
+
+  // ---------------- SEARCH RESULTS ----------------
+
+  Widget _buildSearchResults() {
+    if (_results.isEmpty) {
+      return const Center(
+        child: Text(
+          'No results found',
+          style: TextStyle(color: Colors.white54),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      itemCount: _results.length,
+      itemBuilder: (_, i) {
+        final c = _results[i];
+        return ListTile(
+          leading: c.logo.isNotEmpty
+              ? Image.network(c.logo, width: 42)
+              : const Icon(Icons.tv),
+          title: RichText(
+            text: _highlight(c.name, _controller.text),
+          ),
+          subtitle: Text(
+            '${c.country} • ${c.categories.join(', ')}',
+            maxLines: 1,
+          ),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => VideoPlayerScreen(channel: c),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // ---------------- SUGGESTIONS ----------------
 
   Widget _buildSuggestions(IptvProvider provider) {
     final popular = provider.popularChannels(limit: 12);
@@ -139,54 +175,14 @@ class _SearchScreenState extends State<SearchScreen> {
       ),
     );
   }
-
-  Widget _buildResults() {
-    if (_results.isEmpty) {
-      return const Center(
-        child: Text('No results', style: TextStyle(color: Colors.white54)),
-      );
-    }
-
-    return ListView.builder(
-      itemCount: _results.length,
-      itemBuilder: (_, i) {
-        final c = _results[i];
-        return ListTile(
-          leading: c.logo.isNotEmpty
-              ? Image.network(
-                  c.logo,
-                  width: 42,
-                  height: 42,
-                  errorBuilder: (_, _, _) =>
-                      const Icon(Icons.tv, color: Colors.white54),
-                )
-              : const Icon(Icons.tv, color: Colors.white54),
-          title: RichText(
-            text: highlight(c.name, _controller.text),
-          ),
-          subtitle: Text(
-            '${c.country} • ${c.categories.join(', ')}',
-            style: const TextStyle(color: Colors.white54),
-            maxLines: 1,
-          ),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => VideoPlayerScreen(channel: c),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
 }
 
-/* ----------------------------- COMPONENTS ----------------------------- */
 
+
+/* ============================= COMPONENTS ============================= */
 class ResultsGrid extends StatelessWidget {
   final List<AppChannel> channels;
+
   const ResultsGrid({super.key, required this.channels});
 
   @override
@@ -200,7 +196,19 @@ class ResultsGrid extends StatelessWidget {
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
       ),
-      itemBuilder: (_, i) => ChannelTile(channel: channels[i]),
+      itemBuilder: (_, i) {
+        final c = channels[i];
+        return InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => VideoPlayerScreen(channel: c)),
+            );
+          },
+          child: ChannelTile(channel: c),
+        );
+      },
     );
   }
 }
@@ -250,8 +258,15 @@ class ChannelTile extends StatelessWidget {
   }
 }
 
+// ---------------- Filter Chips (FUNCTIONAL) ----------------
+
 class FilterChips extends StatelessWidget {
-  const FilterChips({super.key});
+  final String? active;
+  final ValueChanged<String?> onSelect;
+
+  const FilterChips({super.key, required this.active, required this.onSelect});
+
+  static const _cats = ['sports', 'movies', 'news', 'kids'];
 
   @override
   Widget build(BuildContext context) {
@@ -260,12 +275,19 @@ class FilterChips extends StatelessWidget {
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        children: const [
-          _Chip('All', true),
-          _Chip('Sports', false),
-          _Chip('Movies', false),
-          _Chip('News', false),
-          _Chip('Kids', false),
+        children: [
+          _Chip(
+            label: 'All',
+            active: active == null,
+            onTap: () => onSelect(null),
+          ),
+          ..._cats.map(
+            (c) => _Chip(
+              label: c.toUpperCase(),
+              active: active == c,
+              onTap: () => onSelect(c),
+            ),
+          ),
         ],
       ),
     );
@@ -275,55 +297,141 @@ class FilterChips extends StatelessWidget {
 class _Chip extends StatelessWidget {
   final String label;
   final bool active;
-  const _Chip(this.label, this.active);
+  final VoidCallback onTap;
+
+  const _Chip({required this.label, required this.active, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(right: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: active ? AppColors.accentColor : AppColors.cardColor,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Center(
-        child: Text(label, style: const TextStyle(color: Colors.white)),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(right: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: active ? AppColors.accentColor : AppColors.cardColor,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Center(
+          child: Text(label, style: const TextStyle(color: Colors.white)),
+        ),
       ),
     );
   }
 }
-
 class CategoryGrid extends StatelessWidget {
   const CategoryGrid({super.key});
 
+  static const categories = [
+    ('movies', 'Movies'),
+    ('sports', 'Sports'),
+    ('news', 'News'),
+    ('kids', 'Kids'),
+    ('regional', 'Regional'),
+    ('devotional', 'Devotional'),
+  ];
+
   @override
   Widget build(BuildContext context) {
-    final cats = ['Movies', 'Sports', 'News', 'Kids', 'Regional', 'Devotional'];
-
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: cats.length,
+      itemCount: categories.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
         childAspectRatio: 4,
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
       ),
-      itemBuilder: (_, i) => Container(
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: AppColors.cardColor,
+      itemBuilder: (_, i) {
+        final key = categories[i].$1;
+        final label = categories[i].$2;
+
+        return InkWell(
           borderRadius: BorderRadius.circular(12),
-        ),
-        child: Text(
-          cats[i],
-          style: const TextStyle(color: Colors.white),
-        ),
-      ),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => CategoryChannelsScreen(
+                  categoryKey: key,
+                  title: label,
+                ),
+              ),
+            );
+          },
+          child: Container(
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: AppColors.cardColor,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              label,
+              style: const TextStyle(color: Colors.white),
+            ),
+          ),
+        );
+      },
     );
   }
 }
+class CategoryChannelsScreen extends StatelessWidget {
+  final String categoryKey;
+  final String title;
+
+  const CategoryChannelsScreen({
+    super.key,
+    required this.categoryKey,
+    required this.title,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<IptvProvider>();
+    final channels = provider.filterChannels(category: categoryKey);
+
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: channels.isEmpty
+          ? const Center(
+              child: Text(
+                'No channels available',
+                style: TextStyle(color: Colors.white54),
+              ),
+            )
+          : GridView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: channels.length,
+              gridDelegate:
+                  const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 4,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                childAspectRatio: 0.78,
+              ),
+              itemBuilder: (_, i) {
+                final c = channels[i];
+                return InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            VideoPlayerScreen(channel: c),
+                      ),
+                    );
+                  },
+                  child: ChannelTile(channel: c),
+                );
+              },
+            ),
+    );
+  }
+}
+
+
 
 class SectionTitle extends StatelessWidget {
   final String text;
