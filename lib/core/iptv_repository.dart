@@ -97,10 +97,11 @@
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../model/app_channel.dart';
+import '../models/app_channel.dart';
 
 class IptvRepository {
   static const _base = 'https://iptv-org.github.io/api';
+  static const _timeout = Duration(seconds: 10);
 
   Future<List<AppChannel>> loadChannels() async {
     final res = await Future.wait([
@@ -118,20 +119,23 @@ class IptvRepository {
         .whereType<String>()
         .toSet();
 
+    // channelId → streams
     final Map<String, List<String>> streamMap = {};
     for (final s in streams) {
-      if (s['status'] != null && s['status'] != 'online') continue;
       final id = s['channel'];
       final url = s['url'];
-      if (id is String && url is String) {
-        (streamMap[id] ??= []).add(url);
-      }
+
+      if (id is! String || url is! String) continue;
+      if (s['status'] != null && s['status'] != 'online') continue;
+
+      (streamMap[id] ??= []).add(url);
     }
 
+    // channelId → logo
     final Map<String, String> logoMap = {
       for (final l in logos)
         if (l['channel'] is String && l['url'] is String)
-          l['channel']: l['url']
+          l['channel'] as String: l['url'] as String
     };
 
     final List<AppChannel> result = [];
@@ -150,7 +154,7 @@ class IptvRepository {
         AppChannel(
           id: id,
           name: ch['name'] ?? '',
-          country: ch['country'] ?? 'Unknown',
+          country: ch['country'] ?? '',
           categories: List<String>.from(ch['categories'] ?? const []),
           languages: List<String>.from(ch['languages'] ?? const []),
           logo: logo,
@@ -163,8 +167,21 @@ class IptvRepository {
     return result;
   }
 
+  // ---------- Internal ----------
   Future<List<Map<String, dynamic>>> _get(String file) async {
-    final res = await http.get(Uri.parse('$_base/$file'));
-    return List<Map<String, dynamic>>.from(jsonDecode(res.body));
+    final res = await http
+        .get(Uri.parse('$_base/$file'))
+        .timeout(_timeout);
+
+    if (res.statusCode != 200) {
+      throw Exception('Failed to load $file (${res.statusCode})');
+    }
+
+    final body = jsonDecode(res.body);
+    if (body is! List) {
+      throw Exception('Invalid response format: $file');
+    }
+
+    return List<Map<String, dynamic>>.from(body);
   }
 }
