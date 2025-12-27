@@ -1,19 +1,9 @@
 class BlockRaw {
-  final String channelId;
-  final String? reason;
-  final String? ref;
+  final String channel;
 
-  BlockRaw({
-    required this.channelId,
-    this.reason,
-    this.ref,
-  });
+  BlockRaw({required this.channel});
 
   factory BlockRaw.fromJson(Map<String, dynamic> json) {
-    return BlockRaw(
-      channelId: json['channel'],
-      reason: json['reason'],
-      ref: json['ref'],
-    );
+    return BlockRaw(channel: json['channel']);
   }
 }

@@ -1,31 +1,27 @@
 class StreamRaw {
-  final String channelId;
-  final String? feedId;
-  final String? title;
+  final String channel;
   final String url;
   final String? referrer;
   final String? userAgent;
-  final String? quality;
 
   StreamRaw({
-    required this.channelId,
-    this.feedId,
-    this.title,
+    required this.channel,
     required this.url,
     this.referrer,
     this.userAgent,
-    this.quality,
   });
 
   factory StreamRaw.fromJson(Map<String, dynamic> json) {
+    final url = json['url'];
+    if (url == null || url is! String || url.isEmpty) {
+      throw const FormatException('Invalid stream url');
+    }
+
     return StreamRaw(
-      channelId: json['channel'],
-      feedId: json['feed'],
-      title: json['title'],
-      url: json['url'],
+      channel: json['channel'],
+      url: url,
       referrer: json['referrer'],
       userAgent: json['user_agent'],
-      quality: json['quality'],
     );
   }
 }
