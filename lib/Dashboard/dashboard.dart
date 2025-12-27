@@ -1,7 +1,11 @@
+
 import 'package:bharvix_tv/home.dart';
+import 'package:bharvix_tv/screens/live_search.dart';
 import 'package:flutter/material.dart';
 
-enum ButtomMenuItem { home, search, live, movies }
+
+// ---------------- MENU ----------------
+enum BottomMenuItem { home, search, home2, movies }
 
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key});
@@ -11,33 +15,52 @@ class Dashboard extends StatefulWidget {
 }
 
 class _DashboardState extends State<Dashboard> {
-  ButtomMenuItem _selected = ButtomMenuItem.home;
+  BottomMenuItem _selected = BottomMenuItem.home;
 
-  int get _currentIndex => ButtomMenuItem.values.indexOf(_selected);
+  int get _currentIndex => BottomMenuItem.values.indexOf(_selected);
 
   void _onItemTapped(int index) {
     setState(() {
-      _selected = ButtomMenuItem.values[index];
+      _selected = BottomMenuItem.values[index];
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+ 
       body: MainContent(selected: _selected),
 
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: _onItemTapped,
         type: BottomNavigationBarType.fixed,
-        backgroundColor: const Color(0xFF261C1C),
-        selectedItemColor: const Color(0xFFEA2A33),
-        unselectedItemColor: const Color(0xFFB89D9F),
+   
+        elevation: 0,
+  
+        unselectedItemColor: Colors.white54,
+        showUnselectedLabels: true,
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
-          BottomNavigationBarItem(icon: Icon(Icons.live_tv), label: 'Live'),
-          BottomNavigationBarItem(icon: Icon(Icons.movie), label: 'Movies'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_outlined),
+            activeIcon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.search_outlined),
+            activeIcon: Icon(Icons.search),
+            label: 'Search',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.dashboard_outlined),
+            activeIcon: Icon(Icons.dashboard),
+            label: 'Explore',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.movie_outlined),
+            activeIcon: Icon(Icons.movie),
+            label: 'Movies',
+          ),
         ],
       ),
     );
@@ -45,27 +68,35 @@ class _DashboardState extends State<Dashboard> {
 }
 
 class MainContent extends StatelessWidget {
-  final ButtomMenuItem selected;
+  final BottomMenuItem selected;
 
   const MainContent({super.key, required this.selected});
 
   @override
   Widget build(BuildContext context) {
     switch (selected) {
-      case ButtomMenuItem.home:
-        return const HomeScreen();
+      case BottomMenuItem.home:
+        return const HomeScreen2();
 
-      case ButtomMenuItem.search:
-        return const Center();
+      case BottomMenuItem.search:
+        return const SearchScreen();
 
-      case ButtomMenuItem.live:
-        return const Center();
-
-      case ButtomMenuItem.movies:
+      case BottomMenuItem.home2:
         return const Center(
           child: Text(
-            'Movies Section Coming Soon!',
-            style: TextStyle(fontSize: 24.0),
+            'Explore',
+            style: TextStyle(color: Colors.white),
+          ),
+        );
+
+      case BottomMenuItem.movies:
+        return const Center(
+          child: Text(
+            'Movies coming soon',
+            style: TextStyle(
+              color: Colors.white54,
+              fontSize: 18,
+            ),
           ),
         );
     }

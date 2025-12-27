@@ -1,117 +1,12 @@
-import 'package:bharvix_tv/model/app_channel.dart';
-import 'package:bharvix_tv/screens/video_player_screen.dart';
+import 'package:bharvix_tv/core/app_colors.dart';
+import 'package:bharvix_tv/screens/video_player.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../provider/iptv_provider.dart';
 
+import 'models/app_channel.dart';
+import 'provider/iptv_provider.dart';
 
-// class HomeScreen extends StatefulWidget {
-//   const HomeScreen({super.key});
-
-//   @override
-//   State<HomeScreen> createState() => _HomeScreenState();
-// }
-
-// class _HomeScreenState extends State<HomeScreen>
-//     with SingleTickerProviderStateMixin {
-//   final tabs = const ['All', 'Sports', 'News', 'Movies'];
-//   late TabController _tab;
-
-//   @override
-//   void initState() {
-//     super.initState();
-//     _tab = TabController(length: tabs.length, vsync: this);
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     final provider = context.watch<IptvProvider>();
-
-//     if (provider.loading) {
-//       return const Scaffold(
-//         backgroundColor: Colors.black,
-//         body: Center(child: CircularProgressIndicator()),
-//       );
-//     }
-
-//     return Scaffold(
-//       backgroundColor: Colors.black,
-//       appBar: AppBar(
-//         title: const Text('Live TV'),
-//         backgroundColor: Colors.black,
-//         bottom: TabBar(
-//           controller: _tab,
-//           isScrollable: true,
-//           tabs: tabs.map((e) => Tab(text: e)).toList(),
-//         ),
-//       ),
-//       body: TabBarView(
-//         controller: _tab,
-//         children: tabs.map((tab) {
-//           final list = tab == 'All'
-//               ? provider.channels
-//               : provider.channels.where((c) =>
-//                   c.categories.any((e) =>
-//                       e.toLowerCase().contains(tab.toLowerCase()))).toList();
-
-//           return GridView.builder(
-//             padding: const EdgeInsets.all(12),
-//             gridDelegate:
-//                 const SliverGridDelegateWithFixedCrossAxisCount(
-//               crossAxisCount: 4,
-//               childAspectRatio: 0.75,
-//               crossAxisSpacing: 12,
-//               mainAxisSpacing: 12,
-//             ),
-//             itemCount: list.length,
-//             itemBuilder: (_, i) {
-//               final c = list[i];
-//               return InkWell(
-//                 onTap: () {
-//                   Navigator.push(
-//                     context,
-//                     MaterialPageRoute(
-//                       builder: (_) => VideoPlayerScreen(channel: c),
-//                     ),
-//                   );
-//                 },
-//                 child: Container(
-//                   decoration: BoxDecoration(
-//                     color: Colors.grey.shade900,
-//                     borderRadius: BorderRadius.circular(12),
-//                   ),
-//                   padding: const EdgeInsets.all(8),
-//                   child: Column(
-//                     children: [
-//                       Expanded(
-//                         child: Image.network(
-//                           c.logo,
-//                           fit: BoxFit.contain,
-//                           errorBuilder: (_, __, ___) =>
-//                               const Icon(Icons.tv, color: Colors.white),
-//                         ),
-//                       ),
-//                       const SizedBox(height: 6),
-//                       Text(
-//                         c.name,
-//                         maxLines: 2,
-//                         overflow: TextOverflow.ellipsis,
-//                         textAlign: TextAlign.center,
-//                         style: const TextStyle(color: Colors.white),
-//                       ),
-//                     ],
-//                   ),
-//                 ),
-//               );
-//             },
-//           );
-//         }).toList(),
-//       ),
-//     );
-//   }
-// }
-
-
+// ---------------- TAB CONFIG ----------------
 const mainTabs = [
   'All',
   'Sports',
@@ -122,31 +17,63 @@ const mainTabs = [
   'India',
 ];
 
-const indiaTabs = ['All', 'Sports', 'News', 'Movies'];
 const indiaHindiTabs = ['All', 'Sports', 'News', 'Movies'];
 
-
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+class HomeScreen2 extends StatefulWidget {
+  const HomeScreen2({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State<HomeScreen2> createState() => _HomeScreen2State();
 }
 
-class _HomeScreenState extends State<HomeScreen>
+class _HomeScreen2State extends State<HomeScreen2>
     with SingleTickerProviderStateMixin {
-  late TabController _tab;
+  late final TabController _mainTab;
 
   @override
   void initState() {
     super.initState();
-    _tab = TabController(length: mainTabs.length, vsync: this);
+    _mainTab = TabController(length: mainTabs.length, vsync: this);
   }
 
   @override
   void dispose() {
-    _tab.dispose();
+    _mainTab.dispose();
     super.dispose();
+  }
+
+  String? _categoryKey(String tab) {
+    switch (tab) {
+      case 'Sports':
+        return 'sports';
+      case 'News':
+        return 'news';
+      case 'Movies':
+        return 'movies';
+      default:
+        return null;
+    }
+  }
+
+  String _tabTitle(String tab, IptvProvider p) {
+    switch (tab) {
+      case 'All':
+        return 'All (${p.channels.length})';
+      case 'Sports':
+        return 'Sports (${p.filterChannels(category: "sports").length})';
+      case 'News':
+        return 'News (${p.filterChannels(category: "news").length})';
+      case 'Movies':
+        return 'Movies (${p.filterChannels(category: "movies").length})';
+      case 'India':
+        return 'India (${p.filterChannels(country: "IN").length})';
+      case 'India Hindi':
+        return 'India Hindi (${p.filterChannels(country: "IN", language: "hin").length})';
+      case 'Popular':
+        return 'Popular (${p.popularChannels().length})';
+      default:
+        return tab;
+    }
   }
 
   @override
@@ -155,41 +82,46 @@ class _HomeScreenState extends State<HomeScreen>
 
     if (provider.loading) {
       return const Scaffold(
-        backgroundColor: Colors.black,
+     
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
-      backgroundColor: Colors.black,
+  
       appBar: AppBar(
-        title: const Text('Live TV'),
-        backgroundColor: Colors.black,
+   
+        elevation: 0,
+        title: const Text('Live TV', style: TextStyle(color: Colors.white)),
         bottom: TabBar(
-          controller: _tab,
+          controller: _mainTab,
           isScrollable: true,
-          tabs: mainTabs.map((e) => Tab(text: e)).toList(),
+     
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white54,
+          tabs: mainTabs.map((t) => Tab(text: _tabTitle(t, provider))).toList(),
         ),
       ),
       body: TabBarView(
-        controller: _tab,
+        controller: _mainTab,
         children: mainTabs.map((tab) {
           if (tab == 'India Hindi') {
-            return IndiaHindiTab(provider: provider);
+            return _IndiaHindiSection(provider: provider);
           }
 
           if (tab == 'India') {
-            return IndiaTab(provider: provider);
+            return ChannelGrid(list: provider.filterChannels(country: "IN"));
           }
 
           if (tab == 'Popular') {
-            return ChannelGrid(
-              list: provider.popularChannels(),
-            );
+            return ChannelGrid(list: provider.popularChannels());
           }
 
+          final key = _categoryKey(tab);
           return ChannelGrid(
-            list: provider.byCategory(tab),
+            list: key == null
+                ? provider.channels.toList()
+                : provider.filterChannels(category: key),
           );
         }).toList(),
       ),
@@ -197,17 +129,21 @@ class _HomeScreenState extends State<HomeScreen>
   }
 }
 
-class IndiaHindiTab extends StatefulWidget {
+// =======================================================
+// INDIA HINDI SECTION
+// =======================================================
+
+class _IndiaHindiSection extends StatefulWidget {
   final IptvProvider provider;
-  const IndiaHindiTab({super.key, required this.provider});
+  const _IndiaHindiSection({required this.provider});
 
   @override
-  State<IndiaHindiTab> createState() => _IndiaHindiTabState();
+  State<_IndiaHindiSection> createState() => _IndiaHindiSectionState();
 }
 
-class _IndiaHindiTabState extends State<IndiaHindiTab>
+class _IndiaHindiSectionState extends State<_IndiaHindiSection>
     with SingleTickerProviderStateMixin {
-  late TabController _tab;
+  late final TabController _tab;
 
   @override
   void initState() {
@@ -221,6 +157,19 @@ class _IndiaHindiTabState extends State<IndiaHindiTab>
     super.dispose();
   }
 
+  String? _key(String tab) {
+    switch (tab) {
+      case 'Sports':
+        return 'sports';
+      case 'News':
+        return 'news';
+      case 'Movies':
+        return 'movies';
+      default:
+        return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -228,14 +177,27 @@ class _IndiaHindiTabState extends State<IndiaHindiTab>
         TabBar(
           controller: _tab,
           isScrollable: true,
-          tabs: indiaHindiTabs.map((e) => Tab(text: e)).toList(),
+     
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white54,
+          tabs: indiaHindiTabs.map((t) => Tab(text: t)).toList(),
         ),
         Expanded(
           child: TabBarView(
             controller: _tab,
             children: indiaHindiTabs.map((tab) {
+              final key = _key(tab);
               return ChannelGrid(
-                list: widget.provider.indiaHindiByCategory(tab),
+                list: key == null
+                    ? widget.provider.filterChannels(
+                        country: "IN",
+                        language: "hin",
+                      )
+                    : widget.provider.filterChannels(
+                        country: "IN",
+                        language: "hin",
+                        category: key,
+                      ),
               );
             }).toList(),
           ),
@@ -244,6 +206,10 @@ class _IndiaHindiTabState extends State<IndiaHindiTab>
     );
   }
 }
+
+// =======================================================
+// CHANNEL GRID (same as Search style)
+// =======================================================
 
 class ChannelGrid extends StatelessWidget {
   final List<AppChannel> list;
@@ -261,12 +227,12 @@ class ChannelGrid extends StatelessWidget {
     }
 
     return GridView.builder(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 4,
-        childAspectRatio: 0.75,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
+        childAspectRatio: 0.78,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
       ),
       itemCount: list.length,
       itemBuilder: (_, i) {
@@ -275,91 +241,59 @@ class ChannelGrid extends StatelessWidget {
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (_) => VideoPlayerScreen(channel: c),
-              ),
+              MaterialPageRoute(builder: (_) => VideoPlayerScreen(channel: c)),
             );
           },
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.grey.shade900,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            padding: const EdgeInsets.all(8),
-            child: Column(
-              children: [
-                Expanded(
-                  child: Image.network(
-                    c.logo,
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) =>
-                        const Icon(Icons.tv, color: Colors.white),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  c.name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ],
-            ),
-          ),
+          child: ChannelTile(channel: c),
         );
       },
     );
   }
 }
 
-
-class IndiaTab extends StatefulWidget {
-  final IptvProvider provider;
-  const IndiaTab({super.key, required this.provider});
-
-  @override
-  State<IndiaTab> createState() => _IndiaTabState();
-}
-
-class _IndiaTabState extends State<IndiaTab>
-    with SingleTickerProviderStateMixin {
-  late TabController _tab;
-
-  @override
-  void initState() {
-    super.initState();
-    _tab = TabController(length: indiaTabs.length, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tab.dispose();
-    super.dispose();
-  }
+class ChannelTile extends StatelessWidget {
+  final AppChannel channel;
+  const ChannelTile({super.key, required this.channel});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        TabBar(
-          controller: _tab,
-          isScrollable: true,
-          tabs: indiaTabs.map((e) => Tab(text: e)).toList(),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.cardColor,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(14),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: channel.logo.isNotEmpty
+                  ? Image.network(channel.logo, fit: BoxFit.contain)
+                  : const Icon(Icons.tv, color: Colors.white54),
+            ),
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                color: Colors.black.withValues(alpha: 0.65),
+                child: Text(
+                  channel.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
-        Expanded(
-          child: TabBarView(
-            controller: _tab,
-            children: indiaTabs.map((tab) {
-              return ChannelGrid(
-                list: widget.provider.indiaByCategory(tab),
-              );
-            }).toList(),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
-
-
