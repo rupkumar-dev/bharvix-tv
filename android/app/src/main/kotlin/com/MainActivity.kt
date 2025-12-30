@@ -1,4 +1,4 @@
-package com.example.bharvix_tv
+package com.bharvixtv
 
 import io.flutter.embedding.android.FlutterActivity
 
