@@ -1,5 +1,5 @@
 import 'package:bharvix_tv/core/app_colors.dart';
-import 'package:bharvix_tv/screens/video_player.dart';
+import 'package:bharvix_tv/screens/VideoPlayer/video_player.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -8,13 +8,14 @@ import 'provider/iptv_provider.dart';
 
 // ---------------- TAB CONFIG ----------------
 const mainTabs = [
-  'All',
-  'Sports',
-  'News',
-  'Movies',
   'India Hindi',
   'Popular',
   'India',
+  'Sports',
+  'News',
+  'Movies',
+
+  'All',
 ];
 
 const indiaHindiTabs = ['All', 'Sports', 'News', 'Movies'];
@@ -81,22 +82,17 @@ class _HomeScreen2State extends State<HomeScreen2>
     final provider = context.watch<IptvProvider>();
 
     if (provider.loading) {
-      return const Scaffold(
-     
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
-  
       appBar: AppBar(
-   
         elevation: 0,
         title: const Text('Live TV', style: TextStyle(color: Colors.white)),
         bottom: TabBar(
           controller: _mainTab,
           isScrollable: true,
-     
+
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white54,
           tabs: mainTabs.map((t) => Tab(text: _tabTitle(t, provider))).toList(),
@@ -177,7 +173,7 @@ class _IndiaHindiSectionState extends State<_IndiaHindiSection>
         TabBar(
           controller: _tab,
           isScrollable: true,
-     
+
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white54,
           tabs: indiaHindiTabs.map((t) => Tab(text: t)).toList(),

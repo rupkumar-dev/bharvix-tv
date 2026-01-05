@@ -1,13 +1,17 @@
 import 'package:bharvix_tv/Dashboard/dashboard.dart';
-import 'package:bharvix_tv/core/iptv_repository.dart';
+//import 'package:bharvix_tv/core/iptv_repository.dart';
 import 'package:bharvix_tv/provider/iptv_provider.dart';
 
 import 'package:flutter/material.dart';
+import 'package:media_kit/media_kit.dart';
 import 'package:provider/provider.dart';
 
 import 'core/theme/app_theme.dart';
 
 void main() {
+   WidgetsFlutterBinding.ensureInitialized();
+  MediaKit.ensureInitialized();
+  
   runApp(
     MultiProvider(
       providers: [

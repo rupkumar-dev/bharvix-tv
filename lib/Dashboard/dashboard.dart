@@ -1,6 +1,7 @@
 
 import 'package:bharvix_tv/home.dart';
 import 'package:bharvix_tv/screens/live_search.dart';
+import 'package:bharvix_tv/update/update_service.dart';
 import 'package:flutter/material.dart';
 
 
@@ -14,10 +15,21 @@ class Dashboard extends StatefulWidget {
   State<Dashboard> createState() => _DashboardState();
 }
 
+
+
 class _DashboardState extends State<Dashboard> {
   BottomMenuItem _selected = BottomMenuItem.home;
 
   int get _currentIndex => BottomMenuItem.values.indexOf(_selected);
+
+@override
+void initState() {
+  super.initState();
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    UpdateService.checkForUpdate(context);
+  });
+}
+
 
   void _onItemTapped(int index) {
     setState(() {
@@ -27,6 +39,7 @@ class _DashboardState extends State<Dashboard> {
 
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
  
       body: MainContent(selected: _selected),

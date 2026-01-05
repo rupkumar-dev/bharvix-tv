@@ -1,0 +1,249 @@
+
+import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
+import '../../models/app_channel.dart';
+
+class VideoPlayerScreen extends StatefulWidget {
+  final AppChannel channel;
+  const VideoPlayerScreen({super.key, required this.channel});
+
+  @override
+  State<VideoPlayerScreen> createState() => _VideoPlayerScreenState();
+}
+
+class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
+  VideoPlayerController? _controller;
+
+  int _streamIndex = 0;
+  bool _loading = true;
+  bool _exhausted = false;
+
+  String _selectedQuality = 'Auto';
+
+  @override
+  void initState() {
+    super.initState();
+    _openNext();
+  }
+
+  Future<void> _openNext() async {
+    if (_streamIndex >= widget.channel.streams.length) {
+      setState(() {
+        _exhausted = true;
+        _loading = false;
+      });
+      return;
+    }
+
+    final url = widget.channel.streams[_streamIndex++];
+
+    try {
+      final controller = VideoPlayerController.networkUrl(
+         Uri.parse(url),
+
+        httpHeaders: widget.channel.headers ?? {},
+        videoPlayerOptions: VideoPlayerOptions(
+          
+          mixWithOthers: true),
+      );
+
+      await controller.initialize();
+      controller.addListener(() {
+        if (mounted) setState(() {});
+      });
+      await controller.play();
+
+      _controller?.dispose();
+      _controller = controller;
+
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _exhausted = false;
+        });
+      }
+    } catch (_) {
+      _openNext();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  void _togglePlay() {
+    if (_controller == null) return;
+
+    setState(() {
+      _controller!.value.isPlaying
+          ? _controller!.pause()
+          : _controller!.play();
+    });
+  }
+
+  void _showQualitySelector() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.grey[900],
+      builder: (_) => _QualitySheet(
+        selected: _selectedQuality,
+        onSelect: (q) {
+          Navigator.pop(context);
+          setState(() => _selectedQuality = q);
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: Text(widget.channel.name),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: _showQualitySelector,
+          ),
+        ],
+      ),
+      body: AspectRatio(
+        aspectRatio: 16 / 9,
+        child: _loading
+            ? _message('Loading stream…')
+            : _exhausted
+                ? _message('Stream not supported')
+                : Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      GestureDetector(
+                        onTap: _togglePlay,
+                        child: VideoPlayer(_controller!),
+                      ),
+
+                      // Play / Pause icon
+                      AnimatedOpacity(
+                        opacity: _controller!.value.isPlaying ? 0.0 : 1.0,
+                        duration: const Duration(milliseconds: 200),
+                        child: const Icon(
+                          Icons.play_circle_fill,
+                          size: 72,
+                          color: Colors.white,
+                        ),
+                      ),
+
+                      // Progress bar
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        child: VideoProgressIndicator(
+                          _controller!,
+                          allowScrubbing: true,
+                          colors: const VideoProgressColors(
+                            playedColor: Colors.red,
+                            bufferedColor: Colors.white54,
+                            backgroundColor: Colors.white24,
+                          ),
+                        ),
+                      ),
+
+                      // Quality button
+                      _QualityButton(
+                        label: _selectedQuality,
+                        onTap: _showQualitySelector,
+                      ),
+                    ],
+                  ),
+      ),
+    );
+  }
+
+  Widget _message(String text) {
+    return Container(
+      color: Colors.black,
+      alignment: Alignment.center,
+      child: Text(text, style: const TextStyle(color: Colors.white70)),
+    );
+  }
+}
+
+class _QualityButton extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+
+  const _QualityButton({
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 8,
+      right: 8,
+      child: Material(
+        color: Colors.green,
+        borderRadius: BorderRadius.circular(4),
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.hd, color: Colors.white, size: 18),
+                const SizedBox(width: 4),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+class _QualitySheet extends StatelessWidget {
+  final String selected;
+  final ValueChanged<String> onSelect;
+
+  const _QualitySheet({
+    required this.selected,
+    required this.onSelect,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const qualities = ['Auto', '360p', '480p', '720p', '1080p'];
+
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: qualities.map((q) {
+          final isSelected = q == selected;
+          return ListTile(
+            title: Text(
+              q,
+              style: TextStyle(
+                color: isSelected ? Colors.blue : Colors.white,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+            trailing:
+                isSelected ? const Icon(Icons.check, color: Colors.blue) : null,
+            onTap: () => onSelect(q),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}

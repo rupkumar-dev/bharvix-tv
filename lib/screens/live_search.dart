@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:bharvix_tv/core/app_colors.dart';
 import '../models/app_channel.dart';
 import '../provider/iptv_provider.dart';
-import 'video_player.dart';
+import 'VideoPlayer/video_player.dart';
 
 
 class SearchScreen extends StatefulWidget {
