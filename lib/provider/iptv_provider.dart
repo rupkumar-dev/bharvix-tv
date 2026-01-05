@@ -1,4 +1,5 @@
-import 'package:bharvix_tv/core/iptv_repository.dart';
+import 'package:bharvix_tv/core/data/Repository/iptv_repository.dart';
+
 import '../models/app_channel.dart';
 import 'dart:collection';
 import 'package:flutter/foundation.dart';

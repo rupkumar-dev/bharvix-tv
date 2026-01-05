@@ -1,103 +1,15 @@
 
-
-
-// import 'dart:convert';
-// import 'package:flutter/foundation.dart';
-// import 'package:http/http.dart' as http;
-// import '../model/app_channel.dart';
-
-// class IptvRepository {
-//   static const String _base = 'https://iptv-org.github.io/api';
-//   static const Duration _timeout = Duration(seconds: 10);
-
-//   /// MAIN ENTRY — call once, cache result
-//   Future<List<AppChannel>> loadPlayableChannels() async {
-//     final responses = await Future.wait([
-//       _getList('channels.json'),
-//       _getList('streams.json'),
-//       _getList('logos.json'),
-//       _getList('blocklist.json'),
-//     ]);
-
-//     final channelsRaw = responses[0];
-//     final streamsRaw = responses[1];
-//     final logosRaw = responses[2];
-//     final blocklistRaw = responses[3];
-
-//     /// Blocked channel IDs
-//     final blockedIds = {
-//       for (final b in blocklistRaw)
-//         if (b['channel'] is String) b['channel'] as String
-//     };
-
-//     /// channelId → stream URLs
-//     final Map<String, List<String>> streamMap = {};
-
-//     for (final s in streamsRaw) {
-//       final id = s['channel'];
-//       final url = s['url'];
-
-//       if (id is! String || url is! String) continue;
-
-//       final status = s['status'];
-//       if (status != null && status != 'online') continue;
-
-//       (streamMap[id] ??= []).add(url);
-//     }
-
-//     /// channelId → logo URL
-//     final Map<String, String> logoMap = {
-//       for (final l in logosRaw)
-//         if (l['channel'] is String && l['url'] is String)
-//           l['channel'] as String: l['url'] as String
-//     };
-
-//     final List<AppChannel> result = [];
-
-//     for (final ch in channelsRaw) {
-//       final id = ch['id'];
-//       if (id is! String) continue;
-//       if (blockedIds.contains(id)) continue;
-
-//       final streams = streamMap[id];
-//       if (streams == null || streams.isEmpty) continue;
-
-//       result.add(
-//         AppChannel(
-//           id: id,
-//           name: ch['name'] ?? '',
-//           country: ch['country'] ?? 'Unknown',
-//           categories:
-//               List<String>.from(ch['categories'] ?? const []),
-//           languages:
-//               List<String>.from(ch['languages'] ?? const []),
-//           logo: logoMap[id] ?? '',
-//           streams: streams,
-//         ),
-//       );
-//     }
-
-//     debugPrint('Loaded channels: ${result.length}');
-//     return result;
-//   }
-
-//   /// ---------- Internal ----------
-//   Future<List<Map<String, dynamic>>> _getList(String file) async {
-//     final res = await http
-//         .get(Uri.parse('$_base/$file'))
-//         .timeout(_timeout);
-
-//     if (res.statusCode != 200) {
-//       throw Exception('Failed to load $file');
-//     }
-
-//     return List<Map<String, dynamic>>.from(jsonDecode(res.body));
-//   }
-// }
-
+import 'package:bharvix_tv/core/errors/api_exception.dart';
 import 'dart:convert';
+
+import 'package:bharvix_tv/models/raw/block_raw.dart';
+import 'package:bharvix_tv/models/raw/channel_raw.dart';
+import 'package:bharvix_tv/models/raw/feed_raw.dart';
+import 'package:bharvix_tv/models/raw/logo_raw.dart';
+import 'package:bharvix_tv/models/raw/stream_raw.dart';
 import 'package:http/http.dart' as http;
 import '../models/app_channel.dart';
+
 
 class IptvRepository {
   static const _base = 'https://iptv-org.github.io/api';
@@ -105,61 +17,74 @@ class IptvRepository {
 
   Future<List<AppChannel>> loadChannels() async {
     final res = await Future.wait([
-      _get('channels.json'),
-      _get('streams.json'),
-      _get('logos.json'),
-      _get('blocklist.json'),
+      _get('channels.json'), // 0
+      _get('feeds.json'), // 1
+      _get('streams.json'), // 2
+      _get('logos.json'), // 3
+      _get('blocklist.json'), // 4
     ]);
 
-    final channels = res[0];
-    final streams = res[1];
-    final logos = res[2];
-    final blocked = res[3]
-        .map((e) => e['channel'])
-        .whereType<String>()
-        .toSet();
+    final channels = res[0].map(ChannelRaw.fromJson).toList();
+    final feeds = res[1].map(FeedRaw.fromJson).toList();
+    final logos = res[3].map(LogoRaw.fromJson).toList();
+    final blocked = res[4].map(BlockRaw.fromJson).map((e) => e.channel).toSet();
 
-    // channelId → streams
-    final Map<String, List<String>> streamMap = {};
-    for (final s in streams) {
-      final id = s['channel'];
-      final url = s['url'];
+    // ---------- channel → streams ----------
+    final Map<String, List<StreamRaw>> streamMap = {};
 
-      if (id is! String || url is! String) continue;
-      if (s['status'] != null && s['status'] != 'online') continue;
+    for (final m in res[2]) {
+      StreamRaw s;
+      try {
+        s = StreamRaw.fromJson(m);
+      } catch (_) {
+        continue;
+      }
 
-      (streamMap[id] ??= []).add(url);
+      if (s.channel.isEmpty || s.url.isEmpty) continue;
+      (streamMap[s.channel] ??= []).add(s);
     }
 
-    // channelId → logo
+    // ---------- channel → language (from feeds) ----------
+    final Map<String, String> languageMap = {};
+    for (final f in feeds) {
+      if (f.channel.isEmpty || f.languages.isEmpty) continue;
+      languageMap.putIfAbsent(f.channel, () => f.languages.first);
+    }
+
+    // ---------- channel → logo ----------
     final Map<String, String> logoMap = {
       for (final l in logos)
-        if (l['channel'] is String && l['url'] is String)
-          l['channel'] as String: l['url'] as String
+        if (l.channel.isNotEmpty && l.url.isNotEmpty) l.channel: l.url,
     };
 
+    // ---------- build ----------
     final List<AppChannel> result = [];
 
     for (final ch in channels) {
-      final id = ch['id'];
-      if (id is! String) continue;
-      if (blocked.contains(id)) continue;
+      if (blocked.contains(ch.id)) continue;
 
-      final streams = streamMap[id];
-      if (streams == null || streams.isEmpty) continue;
+      final chStreams = streamMap[ch.id];
+      if (chStreams == null || chStreams.isEmpty) continue;
 
-      final logo = logoMap[id] ?? '';
+      final first = chStreams.first;
+
+      final headers = <String, String>{
+        if (first.referrer != null) 'Referer': first.referrer!,
+        if (first.userAgent != null) 'User-Agent': first.userAgent!,
+      };
 
       result.add(
         AppChannel(
-          id: id,
-          name: ch['name'] ?? '',
-          country: ch['country'] ?? '',
-          categories: List<String>.from(ch['categories'] ?? const []),
-          languages: List<String>.from(ch['languages'] ?? const []),
-          logo: logo,
-          poster: logo.isNotEmpty ? logo : null,
-          streams: streams,
+          id: ch.id,
+          name: ch.name,
+          country: ch.country,
+          categories: ch.categories,
+          languages: languageMap[ch.id] != null
+              ? [languageMap[ch.id]!]
+              : const [],
+          logo: logoMap[ch.id] ?? '',
+          streams: chStreams.map((e) => e.url).toList(growable: false),
+          headers: headers.isEmpty ? null : headers,
         ),
       );
     }
@@ -167,21 +92,19 @@ class IptvRepository {
     return result;
   }
 
-  // ---------- Internal ----------
+  // ---------- HTTP ----------
   Future<List<Map<String, dynamic>>> _get(String file) async {
-    final res = await http
-        .get(Uri.parse('$_base/$file'))
-        .timeout(_timeout);
+    final res = await http.get(Uri.parse('$_base/$file')).timeout(_timeout);
 
     if (res.statusCode != 200) {
-      throw Exception('Failed to load $file (${res.statusCode})');
+      throw ApiException('Request failed', statusCode: res.statusCode);
     }
 
-    final body = jsonDecode(res.body);
-    if (body is! List) {
-      throw Exception('Invalid response format: $file');
+    final decoded = jsonDecode(res.body);
+    if (decoded is! List) {
+      throw ApiException('Invalid response format');
     }
 
-    return List<Map<String, dynamic>>.from(body);
+    return decoded.cast<Map<String, dynamic>>();
   }
 }
